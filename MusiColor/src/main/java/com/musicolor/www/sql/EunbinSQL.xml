@@ -6,9 +6,395 @@
 			
 
 <mapper namespace="eSQL">
-<!-- 	<select id=""  parameterType="" resultType="">
-
-	</select> -->
+	<!-- upload SQL -->
+	<insert id="vocalIn"  parameterType="sVO">
+		<selectKey keyProperty="s_vno" resultType="int" order="BEFORE">
+				SELECT 
+					(NVL(MAX(v_no) + 1, 10000001))
+				FROM
+					vocal
+		</selectKey>
+		INSERT INTO 
+			vocal(v_no, v_name) 
+		VALUES(
+			#{s_vno}, #{v_name}
+		)
+	</insert>
+	
+	<select id="vocalSearch" parameterType="sVO" resultType="sVO">
+		SELECT
+		    v_no s_vno, v_name
+		FROM
+		    vocal
+		WHERE
+		    REPLACE(UPPER(v_name), ' ', '') 
+		    LIKE '%'||REPLACE(UPPER(#{v_name}), ' ','')||'%'
+	</select>
+	
+	<insert id="songIn" parameterType="sVO">
+	<selectKey keyProperty="s_no" resultType="long" order="BEFORE">
+		SELECT 
+			(NVL(MAX(s_no) + 1, 100000000001)) 
+		FROM song
+	</selectKey>
+		INSERT INTO
+			song
+		VALUES (
+			#{s_no}, #{s_vno}, #{s_title}, #{s_ano}
+			)
+	</insert>
+	
+	<insert id="youtubeIn" parameterType="sVO">
+	<selectKey keyProperty="y_no" resultType="long" order="BEFORE">
+		SELECT 
+			(NVL(MAX(y_no) + 1, 100000000001)) 
+		FROM youtube
+	</selectKey>
+		INSERT INTO
+	    	youtube(y_no, y_sno, y_link, y_mno)
+		VALUES (
+	    	#{y_no}, #{s_no}, #{y_link}, #{y_mno}
+		)
+	</insert>
+	
+	<select id="searchSong" parameterType="String" resultType="sVO">
+		SELECT 
+		    s_no, s_title, s_vno, s_ano, 
+		    (SELECT v_name FROM vocal WHERE v_no = s_vno) v_name,
+		    (SELECT y_link FROM youtube WHERE s_no = y_sno) y_link,
+		    (SELECT y_no FROM youtube WHERE s_no = y_sno) y_no,
+		    (Select a_sname FROM albumpicture WHERE a_no = s_ano) a_sname
+		FROM
+		    song
+		WHERE 
+		    REPLACE(UPPER(s_title), ' ', '') 
+		    LIKE '%'||REPLACE(UPPER(#{keywords}), ' ','')||'%'
+	</select>
+	
+	<insert id="boardIn" parameterType="bVO">
+		<selectKey keyProperty="b_no" resultType="long" order="BEFORE">
+			SELECT
+				(NVL(MAX(b_no) + 1, 100000000001))
+			FROM board
+		</selectKey>
+		INSERT INTO
+    		board(b_no, b_mno, b_vno, b_sno, b_yno, b_ano, b_emotion, b_body)
+		VALUES (
+			#{b_no}, #{b_mno}, #{b_vno}, #{b_sno}, #{b_yno}, #{b_ano}, 1, #{b_body}
+		)
+	</insert>
+	
+	<select id="findMno" parameterType="string" resultType="int">
+		SELECT
+		    m_no
+		FROM
+		    member
+		WHERE
+		    m_id = #{m_id}
+	</select>
+	
+	<!-- random SQL -->
+	
+	<select id="recentEmo">
+		<![CDATA[    
+		SELECT
+			*
+		FROM
+			(SELECT
+				b_emotion, b_no, 
+				(SELECT a_sname FROM albumpicture WHERE b_ano = a_no) sname
+			FROM
+				board
+			ORDER BY DBMS_RANDOM.value
+			)
+		WHERE
+			rownum <= 9
+	]]>
+	</select>
+	
+	<select id="randomSearch" parameterType="String" resultType="bVO"> 
+		SELECT
+			*
+		FROM
+			(SELECT
+				b_emotion, b_no, 
+				(SELECT a_sname FROM albumpicture WHERE b_ano = a_no) sname,
+				(SELECT m_id FROM member WHERE m_no = b_mno) m_id
+			FROM
+				board
+			<if test="value != null">
+	    	WHERE
+	    		b_emotion = #{value}
+    		</if>
+			ORDER BY DBMS_RANDOM.value
+			)
+	<![CDATA[   
+		WHERE
+			rownum <= 9
+	]]>
+	</select>
+	
+	<!-- report SQL -->
+	<insert id="reportProc" parameterType="rVO">
+		<selectKey keyProperty="r_no" resultType="long" order="BEFORE">
+			SELECT 
+				(NVL(MAX(r_no) + 1, 100000000001)) 
+			FROM report
+		</selectKey>
+		INSERT INTO
+	    	report(r_no, r_mno, r_problem, r_kind, r_detail)
+		VALUES(
+	    	#{r_no}, #{r_mno}, #{r_problem}, #{r_kind}, #{r_detail}
+		)
+	</insert>
+	
+	<!-- admin SQL -->
+	<select id="adminLogin" resultType="int" parameterType="mVO">
+		SELECT
+			count(*)
+		FROM
+			admin
+		WHERE
+			ad_id = #{m_id}
+			and ad_pw = #{m_pw}
+	</select>
+	
+	<select id="getReport" parameterType="String" resultType="rVO">
+		SELECT
+    		r_no, r_problem, r_kind, r_detail, r_isokay,
+    		TO_CHAR(r_date, 'YYYY/MM/DD')r_date,
+    		(SELECT m_id FROM member WHERE m_no = r_mno) id,
+    		(SELECT s_title FROM song WHERE s_no = r_problem) song,
+    		(SELECT ad_id FROM admin WHERE ad_no = r_admin) adid
+		FROM
+    		report
+    	<if test="value != null">
+	    	WHERE
+	    		r_isokay = #{value}
+    	</if>
+		ORDER BY
+    		r_no DESC
+	</select>
+	
+	<select id="repoDetail" parameterType="String" resultType="sVO">
+		SELECT
+		    s_title, s_vno, s_no, s_ano,
+		    (SELECT v_name FROM vocal WHERE v_no = s_vno)v_name,
+		    (SELECT a_sname FROM albumpicture WHERE a_no = s_ano)a_sname,
+		    (SELECT y_link FROM youtube WHERE y_sno = s_no) y_link,
+		    (SELECT y_no FROM youtube WHERE y_sno = s_no) y_no  
+		FROM
+		    song
+		WHERE
+		    s_no = #{sno}
+	</select>
+	
+	<select id="repoDetailBoard" parameterType="String" resultType="bVO">
+		SELECT
+			b_body
+		FROM
+			board
+		WHERE
+			b_no = #{bno}
+	</select>
+	
+	<select id="repoDetailComt" parameterType="String" resultType="cmVO">
+		SELECT
+			c_body
+		FROM
+			comt
+		WHERE
+			c_no = #{cno}
+	</select>
+	
+	<select id="findADMno" parameterType="string" resultType="int">
+		SELECT
+		    ad_no
+		FROM
+		    admin
+		WHERE
+		    ad_id = #{ad_id}
+	</select>
+	
+	<update id="reupdateVocal" parameterType="sVO">
+		UPDATE
+			vocal
+		<set>
+				v_name = #{v_name}
+			WHERE
+				v_no = #{s_vno}
+		</set>
+	</update>
+	
+	<update id="reupdateSong" parameterType="sVO">
+		UPDATE
+			song
+		<set>
+				s_title = #{s_title}
+			WHERE
+				s_no = #{s_no}
+		</set>
+	</update>
+	
+	<update id="reupdateYoutube" parameterType="sVO">
+		UPDATE
+			youtube
+		<set>
+				y_link = #{y_link}
+			WHERE
+				y_no = #{y_no}
+		</set>
+	</update>
+	
+	<update id="reupdateReport" parameterType="Object">
+		UPDATE
+			report
+		<set>
+				r_isokay = 'Y', r_admin = #{m_no}
+			WHERE
+				r_no = #{r_no}
+		</set>
+	</update>
+	
+	<update id="reupdateBoard" parameterType="bVO">
+		UPDATE
+			board
+		<set>
+				b_isshow = 'N'
+			WHERE
+				b_no = #{b_no}
+		</set>
+	</update>
+	
+	<update id="reupdateComt" parameterType="cmVO">
+		UPDATE
+			comt
+		<set>
+				c_isshow = 'N'
+			WHERE
+				c_no = #{c_no}
+		</set>
+	</update>
+	
+	<update id="reupdateSMember" parameterType="SVO">
+		UPDATE
+			member
+		<set>
+				m_isban = m_isban + 1
+			WHERE
+				m_no = (SELECT y_mno FROM youtube WHERE y_no = #{y_no})
+		</set>
+	</update>
+	
+	<update id="reupdateBMember" parameterType="bVO">
+		UPDATE
+			member
+		<set>
+				m_isban = m_isban + 1
+			WHERE
+				m_no = (SELECT b_mno FROM board WHERE b_no = #{b_no})
+		</set>
+	</update>
+	
+	<update id="reupdateCMember" parameterType="cmVO">
+		UPDATE
+			member
+		<set>
+				m_isban = m_isban + 1
+			WHERE
+				m_no = (SELECT c_mno FROM comt WHERE c_no = #{c_no})
+		</set>
+	</update>
+	
+	<select id="todayMember" resultType="int">
+		SELECT
+		    count(*)
+		FROM
+		    member
+		WHERE
+		   m_date = sysdate
+	</select>
+	
+	<select id="totalMember" resultType="int">
+		SELECT
+		    count(*)
+		FROM
+		    member
+	</select>
+	
+	<select id="todayBoard" resultType="int">
+		SELECT
+		    count(*)
+		FROM
+		    board
+		WHERE
+		   b_date = sysdate
+	</select>
+	
+	<select id="totalBoard" resultType="int">
+		SELECT
+		    count(*)
+		FROM
+		    board
+	</select>
+	
+	<select id="vocalChart" resultType="sVO">
+	<![CDATA[
+		SELECT
+		    *
+		FROM
+		    (SELECT
+		        (SELECT v_name FROM vocal WHERE v_no = b_vno) v_name,
+		        count(*) chart
+		    FROM
+		        board
+		    WHERE
+		        b_isshow = 'Y'
+		    GROUP BY
+		        b_vno
+		    ORDER BY
+		        chart DESC)
+		WHERE rownum <= 8
+	]]>
+	</select>
+	
+	<select id="boardChart" resultType="chVO">
+	<![CDATA[
+		SELECT
+		    *
+		FROM
+		    (SELECT
+		        to_char(b_date, 'yyyy-mm') month, count(*) cnt
+		    FROM
+		        board
+		    GROUP BY
+		        to_char(b_date, 'yyyy-mm')
+		    ORDER BY
+		        month DESC)
+		WHERE
+		    rownum <= 12
+	]]>
+	</select>
+	
+	<select id="boardChartSelected" parameterType="int" resultType="chVO">
+	<![CDATA[
+		SELECT
+		    *
+		FROM
+		    (SELECT
+		        to_char(b_date, 'yyyy-mm') month, count(*) cnt
+		    FROM
+		        board
+		    WHERE
+		    	b_emotion = #{emo}
+		    GROUP BY
+		        to_char(b_date, 'yyyy-mm')
+		    ORDER BY
+		        month DESC)
+		WHERE
+		    rownum <= 12
+	]]>
+	</select>
 </mapper>
 
 

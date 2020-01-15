@@ -1,25 +1,33 @@
 package com.musicolor.www.vo;
 
+import java.util.ArrayList;
+
 import org.springframework.web.multipart.MultipartFile;
 
 public class BoardVO {
 	//board
-	private int b_no;
+	private long b_no;
 	private int b_mno;
 	private int b_vno;
-	private int b_sno;
-	private int b_yno;
-	private int b_ano;
+	private long b_sno;
+	private long b_yno;
+	private long b_ano;
 	private int b_like;
 	private int b_emotion;
 	private char b_isshow;
 	private String b_date;
+	private String b_body;
+	private int rno;
 	
 	private MultipartFile sFile;
 	private MultipartFile[] file;
 	
+	//member
+	private String m_id;
 	
-	
+	//picture
+	private String sname;
+	 
 	//vocal 
 	private String v_name;
 	
@@ -30,9 +38,61 @@ public class BoardVO {
 	private String y_link;
 	private char y_ismain;
 	
+	//search
+	private String key_main;
+	private String key_tab;
 	
+	//ComtVO 담을 list
+	private ArrayList<ComtVO> comt;
 	
+	private String id;
+	private int m_no;
+	private int ban;
 	
+	private long r_no;
+	
+	public int getRno() {
+		return rno;
+	}
+	public void setRno(int rno) {
+		this.rno = rno;
+	}
+	public ArrayList<ComtVO> getComt() {
+		return comt;
+	}
+	public void setComt(ArrayList<ComtVO> comt) {
+		this.comt = comt;
+	}
+	public String getKey_main() {
+		return key_main;
+	}
+	public void setKey_main(String key_main) {
+		this.key_main = key_main;
+	}
+	public String getKey_tab() {
+		return key_tab;
+	}
+	public void setKey_tab(String key_tab) {
+		this.key_tab = key_tab;
+	}
+	public String getM_id() {
+		return m_id;
+	}
+	public void setM_id(String m_id) {
+		this.m_id = m_id;
+	}
+	public String getSname() {
+		return sname;
+	}
+	public void setSname(String sname) {
+		this.sname = sname;
+	}
+	public String getB_body() {
+		return b_body;
+	}
+	public void setB_body(String b_body) {
+		this.b_body = b_body;
+	}
 	public MultipartFile getsFile() {
 		return sFile;
 	}
@@ -45,10 +105,10 @@ public class BoardVO {
 	public void setFile(MultipartFile[] file) {
 		this.file = file;
 	}
-	public int getB_no() {
+	public long getB_no() {
 		return b_no;
 	}
-	public void setB_no(int b_no) {
+	public void setB_no(long b_no) {
 		this.b_no = b_no;
 	}
 	public int getB_mno() {
@@ -63,22 +123,22 @@ public class BoardVO {
 	public void setB_vno(int b_vno) {
 		this.b_vno = b_vno;
 	}
-	public int getB_sno() {
+	public long getB_sno() {
 		return b_sno;
 	}
-	public void setB_sno(int b_sno) {
+	public void setB_sno(long b_sno) {
 		this.b_sno = b_sno;
 	}
-	public int getB_yno() {
+	public long getB_yno() {
 		return b_yno;
 	}
-	public void setB_yno(int b_yno) {
+	public void setB_yno(long b_yno) {
 		this.b_yno = b_yno;
 	}
-	public int getB_ano() {
+	public long getB_ano() {
 		return b_ano;
 	}
-	public void setB_ano(int b_ano) {
+	public void setB_ano(long b_ano) {
 		this.b_ano = b_ano;
 	}
 	public int getB_like() {
@@ -129,6 +189,31 @@ public class BoardVO {
 	public void setY_ismain(char y_ismain) {
 		this.y_ismain = y_ismain;
 	}
+	public String getId() {
+		return id;
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
+	public int getM_no() {
+		return m_no;
+	}
+	public void setM_no(int m_no) {
+		this.m_no = m_no;
+	}
+	public int getBan() {
+		return ban;
+	}
+	public void setBan(int ban) {
+		this.ban = ban;
+	}
+	public long getR_no() {
+		return r_no;
+	}
+	public void setR_no(long r_no) {
+		this.r_no = r_no;
+	}
+	
 	
 	
 }

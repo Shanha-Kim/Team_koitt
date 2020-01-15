@@ -10,10 +10,14 @@ public class FileDAO {
 	SqlSessionTemplate sqlSession;
 	
 	public int profilePicture(FileVO fVO) {
-		return sqlSession.insert("fSQL.addproPic", fVO);
-		//성공하면 1 실패하면 0 리턴
+		return sqlSession.update("fSQL.addpic", fVO);
+		// 성공하면 1 실패하면 0 리턴
 	}
+
 	public int albumPicture(FileVO fVO) {
-		return sqlSession.insert("fSQL.addalbumPic", fVO);
+		if (fVO.getCheck() == 1) {
+			return sqlSession.update("fSQL.updateAlbumPic", fVO);
+		}
+		return sqlSession.insert("fSQL.addAlbumPic", fVO);
 	}
 }

@@ -6,23 +6,248 @@
 
 
 <mapper namespace="sSQL">
-	<select id="SearchBefore"  resultType="bVO">
+	<select id="FindPW" parameterType="mVO" resultType="String">
+		SELECT m_pw FROM member WHERE
+		m_email = #{m_email} AND
+		m_id = #{m_id}
+	</select>
+	<select id="ShowFeed" parameterType="bVO"  resultType="bVO">
+		SELECT * FROM
+		(SELECT m_id, sname, y_link, s_title,b_like, b_body, b_date, b_no, b_emotion , ROWNUM rno FROM
+			(SELECT
+				(SELECT m_id FROM member WHERE b_mno=m_no) m_id, 
+				(SELECT p_sname FROM profilepicture WHERE p_no=(SELECT m_pno FROM member WHERE m_no=b_mno)) sname, 
+				(SELECT y_link FROM youtube WHERE y_no=b_yno) y_link,
+				(SELECT s_title FROM song WHERE s_no=b_sno) s_title,
+				b_like, b_body, b_date, b_no, b_emotion
+			FROM
+				board
+			WHERE
+				(b_mno IN (SELECT f_following FROM follow WHERE f_follower = (SELECT m_no FROM member WHERE m_id=#{m_id}))
+				OR b_mno = (SELECT m_no FROM member WHERE m_id=#{m_id}))
+				AND b_isshow = 'Y'
+			ORDER BY b_date desc
+ 			))
+ 		WHERE
+			rno BETWEEN #{rno} AND #{rno}+4
+	</select>
+	
+	<update id="DelComt" parameterType="cmVO">
+		UPDATE comt
+		SET c_isshow = 'N'
+		WHERE c_no = #{c_no}
+	</update>
+	<update id="DecComt" parameterType="cmVO">
+		INSERT INTO report VALUES(
+			(SELECT NVL(max(r_no)+1, 100000000001) FROM report), (SELECT m_no FROM member WHERE m_id = #{c_mid}), #{c_no},
+			'comt', '부적절한 댓글로 신고합니다.' , 'N', sysdate, null
+		)
+	</update>
+	<update id="DelPost" parameterType="bVO">
+		UPDATE board
+		SET b_isshow = 'N'
+		WHERE b_no = #{b_no}
+	</update>
+	<update id="DecPost" parameterType="bVO">
+		INSERT INTO report VALUES(
+			(SELECT NVL(max(r_no)+1, 100000000001) FROM report), (SELECT m_no FROM member WHERE m_id = #{m_id}), #{b_no},
+			'board', '부적절한 포스팅으로 신고합니다.' , 'N', sysdate, null
+		)
+	</update>
+	
+	<select id="SearchBefore" parameterType="bVO" resultType="bVO">
 	<![CDATA[    
 		SELECT
-			bno, bmno, btitle, bbody, joinDate
+			*
 		FROM
-			(
-				SELECT 
-					a.*, ROWNUM rno, count(*)over() total
-				FROM 
-					(
-						SELECT * FROM board ORDER BY bno desc					
-					) a
+			(SELECT
+				b_no, (SELECT a_sname FROM albumpicture WHERE b_ano = a_no) sname, b_emotion, b_body, 
+				(SELECT m_id FROM member WHERE m_no = b_mno) m_id
+			FROM
+				board
+			WHERE
+				b_isshow = 'Y'
+			ORDER BY DBMS_RANDOM.value
 			)
 		WHERE
-			rno > 15 AND rno <= 30
+			rownum <= 9
 	]]>
 	</select>
+	
+	<select id="showDetail" parameterType="bVO"  resultType="bVO">
+		SELECT
+			(SELECT m_id FROM member WHERE b_mno=m_no) m_id, 
+			(SELECT p_sname FROM profilepicture WHERE p_no=(SELECT m_pno FROM member WHERE m_no=b_mno)) sname, 
+			(SELECT y_link FROM youtube WHERE y_no=b_yno) y_link,
+			(SELECT s_title FROM song WHERE s_no=b_sno) s_title,
+			b_like, b_body, b_date
+		FROM
+			board
+		WHERE
+			b_no = #{b_no}
+	</select>
+	<select id="showComt" parameterType="bVO" resultType="cmVO">
+		SELECT c_no, c_bno, c_mno, c_like, c_upno, c_date, c_isshow, c_body, 
+			(SELECT m_id FROM member where m_no=c_mno) c_mid,
+			(SELECT m_id FROM member where m_no=c_upmno ) c_upid
+		FROM
+			(SELECT c_no, c_bno, c_mno, c_like, c_upno, c_date, c_isshow, c_body,
+			 		(SELECT b.c_mno FROM comt b WHERE b.c_no = a.c_upno ) c_upmno
+			 FROM comt a WHERE c_bno = #{b_no})	
+		WHERE c_isshow='Y'
+		ORDER BY c_no
+	</select>
+	<insert id="ComtWrite1" parameterType="cmVO">
+		INSERT INTO comt VALUES(
+			(SELECT NVL(max(c_no)+1, 100000000001) FROM comt), #{c_bno}, 
+			(SELECT m_no FROM member WHERE m_id = #{c_mid}), 0, null, sysdate, 'Y', #{c_body}
+		)
+	</insert>
+	<insert id="ComtWrite2" parameterType="cmVO">
+		INSERT INTO comt VALUES(
+			(SELECT NVL(max(c_no)+1, 100000000001) FROM comt), #{c_bno}, 
+			(SELECT m_no FROM member WHERE m_id = #{c_mid}), 0, #{c_upno}, sysdate, 'Y', #{c_body}
+		)
+	</insert>
+	<select id="ComtAppend" parameterType="cmVO" resultType="long">
+		SELECT c_no FROM comt 
+		WHERE 
+			c_bno = #{c_bno} AND
+			c_mno = (SELECT m_no FROM member WHERE m_id = #{c_mid}) AND
+			c_body = #{c_body}
+	</select>
+	
+	
+	<select id="LikeCheck" parameterType="bVO" resultType="int">
+		SELECT count(*) FROM boardlike 
+		WHERE 
+			bl_bno=#{b_no} AND 
+			bl_mno = (SELECT m_no FROM member WHERE m_id = #{m_id})
+	</select>
+	<insert id="LikeProcIns" parameterType="bVO">
+		INSERT INTO
+			boardlike
+		VALUES(
+			(SELECT NVL(max(bl_no)+1, 100000000001) FROM boardlike), #{b_no}, 
+			(SELECT m_no FROM member WHERE m_id = #{m_id}), 'Y'
+		)
+	</insert>
+	<update id="LikeProcPlus" parameterType="bVO">
+		UPDATE
+			board
+		SET
+			b_like = b_like + 1
+		WHERE
+			b_no = #{b_no}
+	</update>
+	<select id="LikeYorN" parameterType="bVO" resultType="bVO">
+		SELECT bl_isshow b_isshow FROM boardlike
+		WHERE
+			bl_bno = #{b_no} AND 
+			bl_mno = (SELECT m_no FROM member WHERE m_id = #{m_id})
+	</select>
+	<update id="LikeProcY" parameterType="bVO">
+		UPDATE
+			boardlike
+		SET
+			bl_isshow = 'Y'
+		WHERE
+			bl_bno = #{b_no} AND 
+			bl_mno = (SELECT m_no FROM member WHERE m_id = #{m_id})
+	</update>
+	<update id="LikeProcN" parameterType="bVO">
+		UPDATE
+			boardlike
+		SET
+			bl_isshow = 'N'
+		WHERE
+			bl_bno = #{b_no} AND 
+			bl_mno = (SELECT m_no FROM member WHERE m_id = #{m_id})
+	</update>
+	<update id="LikeProcMinus" parameterType="bVO">
+		UPDATE
+			board
+		SET
+			b_like = b_like - 1
+		WHERE
+			b_no = #{b_no}
+	</update>
+	
+	<select id="LikeProcSel" parameterType="bVO"  resultType="bVO">
+		SELECT
+			b_like
+		FROM
+			board
+		WHERE
+			b_no = #{b_no}
+	</select>
+	
+	<select id="SearchAfter"  resultType="bVO" parameterType="bVO">
+		SELECT
+			*
+		FROM
+			(SELECT
+				b_no, (SELECT a_sname FROM albumpicture WHERE b_ano = a_no) sname, b_emotion, ROWNUM rno,
+				(SELECT m_id FROM member WHERE m_no = b_mno) m_id
+			FROM
+				board
+			WHERE
+				1=1 
+				<if test="key_tab != null and key_tab == 'All'">
+					AND
+					b_sno IN (SELECT s_no FROM song WHERE  REPLACE(UPPER(s_title), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%') OR
+					b_vno IN (SELECT v_no FROM vocal WHERE REPLACE(UPPER(v_name), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%') OR
+					b_mno IN (SELECT m_no FROM member WHERE REPLACE(UPPER(m_id), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%') OR
+					REPLACE(UPPER(b_body), ' ', '') LIKE '%#'||REPLACE(UPPER(#{key_main}), ' ','')||'%'
+				
+				</if>
+				<if test="key_tab != null and key_tab == 'Song'">
+					AND
+					b_sno IN (SELECT s_no FROM song WHERE  REPLACE(UPPER(s_title), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%')
+				</if>
+				<if test="key_tab != null and key_tab == 'Artist'">
+					AND
+					b_vno IN (SELECT v_no FROM vocal WHERE REPLACE(UPPER(v_name), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%')	
+				</if>
+				<if test="key_tab != null and key_tab == 'User'">
+					AND
+					b_mno IN (SELECT m_no FROM member WHERE REPLACE(UPPER(m_id), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%')
+				</if>
+				<if test="key_tab != null and key_tab == 'Hashtag'">
+					AND
+					REPLACE(UPPER(b_body), ' ', '') LIKE '%#'||REPLACE(UPPER(#{key_main}), ' ','')||'%'
+				</if>
+			ORDER BY 
+				rno
+			)
+		WHERE
+		rno BETWEEN #{r_no} AND #{r_no}+8
+	</select>
+	<select id="PreView"  resultType="fVO" parameterType="bVO">
+	<![CDATA[    
+		SELECT
+			*
+		FROM
+			(SELECT
+				b_no, (SELECT a_sname FROM albumpicture WHERE b_ano = a_no) sname
+			FROM
+				board
+			WHERE
+				b_sno = (SELECT s_no FROM song WHERE s_title = #{key_main}) OR
+				b_vno = (SELECT v_no FROM vocal WHERE v_name = #{key_main}) OR
+				b_mno = (SELECT m_no FROM member WHERE m_id = #{key_main}) OR
+				b_body like '%#'||#{key_main}||'%'
+			ORDER BY DBMS_RANDOM.value
+			)
+		WHERE
+			rownum <= 9
+	]]>
+	</select>
+	
+	<select id="InfiniteScroll" resultType="fVO" parameterType="bVO">
+		
+	</select>
+	
 </mapper>
 
 
