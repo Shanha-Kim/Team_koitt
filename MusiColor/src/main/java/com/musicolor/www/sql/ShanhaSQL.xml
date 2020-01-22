@@ -27,7 +27,7 @@
 				OR b_mno = (SELECT m_no FROM member WHERE m_id=#{m_id}))
 				AND b_isshow = 'Y'
 			ORDER BY b_date desc
- 			))
+ 			)) 
  		WHERE
 			rno BETWEEN #{rno} AND #{rno}+4
 	</select>
@@ -192,7 +192,7 @@
 			FROM
 				board
 			WHERE
-				1=1 
+				b_isshow = 'Y' AND 1=1 
 				<if test="key_tab != null and key_tab == 'All'">
 					AND
 					b_sno IN (SELECT s_no FROM song WHERE  REPLACE(UPPER(s_title), ' ', '') LIKE '%'||REPLACE(UPPER(#{key_main}), ' ','')||'%') OR
